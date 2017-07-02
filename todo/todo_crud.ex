@@ -96,3 +96,7 @@ end
 
 # my_todo = TodoList.CsvImporter.import("entries.csv") |> TodoList.delete_entry(%{date: {19, 12, 2013}, id: 3, title: "Movies"})
 # my_todo = TodoList.CsvImporter.import("entries.csv") |> TodoList.delete_entry(3)
+
+async_query = fn(query_def) -> spawn(fn -> IO.puts(run_query.(query_def)) end); end
+
+run_query = fn(query_def) -> :timer.sleep(2000); "#{query_def} result" end
