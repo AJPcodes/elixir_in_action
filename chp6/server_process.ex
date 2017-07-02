@@ -8,14 +8,11 @@ defmodule ServerProcess do
   end
 
   defp loop(callback_module, current_state) do
-    reveive do
+    receive do
       {request, caller} -> 
-        {response, new_state} = callback_module.handle_call(
-          request,
-          current_state
-        )
+        {response, new_state} = callback_module.handle_call(request,current_state)
 
-        send (caller, {:response, response})
+        send(caller, {:response, response})
 
         loop(callback_module, new_state)
 
@@ -26,7 +23,7 @@ defmodule ServerProcess do
     send(server_pid, {request, self})
 
     receive do
-      {:response, repsonse} -> 
+      {:response, response} -> 
         response
     end
   end
