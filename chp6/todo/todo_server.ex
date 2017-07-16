@@ -1,3 +1,47 @@
+defmodule ServerProcess do
+
+  def start(callback_module) do
+    spawn(fn -> 
+      initial_state = callback_module.init
+      loop(callback_module, initial_state)  
+    end)
+  end
+
+  defp loop(callback_module, current_state) do
+    receive do
+      {:call, request, caller} -> 
+        {response, new_state} = callback_module.handle_call(request,current_state)
+
+        send(caller, {:response, response})
+
+        loop(callback_module, new_state)
+       
+      {:cast, request} ->
+        new_state = callback_module.handle_cast(
+          request,
+          current_state
+        )
+
+        loop(callback_module, new_state)
+
+    end
+  end
+
+  def call(server_pid, request) do
+    send(server_pid, {:call, request, self})
+
+    receive do
+      {:response, response} -> 
+        response
+    end
+  end
+
+  def cast(server_pid, request) do
+    send(server_pid, {:cast, request})
+  end
+
+end
+
 defmodule TodoList do
   defstruct auto_id: 1, entries: Map.new()
   
@@ -62,41 +106,30 @@ defmodule TodoList do
     %TodoList{todo_list | entries: new_entries}
   end
 
-
 end
 
-defmodule TodoList.CsvImporter do
-
-  def import(file_path) do
-    File.stream!(file_path) 
-    |> Stream.map(&String.replace(&1, "\n", ""))
-    |> Stream.map(&String.split(&1, ","))
-    |> Stream.map(
-      fn(line) ->
-        format_line(line)
-      end
-    )
-    |> TodoList.new
+defmodule TodoServer do
+  def start do
+    ServerProcess.start(TodoServer)
   end
 
+  def add_entry(todo_server, new_entry) do
+    ServerProcess.cast(todo_server, {:add_entry, new_entry})
+  end
 
-  defp format_line([ date | [ title | []]]) do
+  def entries(todo_server, date) do
+    ServerProcess.call(todo_server, {:entries, date})
+  end
 
-    formatted_date = String.split(date, "/", [])
-    |> Enum.map(&String.to_integer(&1))
-    |> format_date
-    
-    %{date: formatted_date, title: title}
-    
-  end 
+  def init do
+    TodoList.new
+  end
 
-  defp format_date([day | [ month | [ year]]]), do: {year, month, day} 
+  def handle_cast({:add_entry, new_entry}, todo_list) do
+    TodoList.add_entry(todo_list, new_entry)
+  end
 
+  def handle_call({:entries, date}, todo_list) do
+    {TodoList.entries(todo_list, date), todo_list}
+  end
 end
-
-# my_todo = TodoList.CsvImporter.import("entries.csv") |> TodoList.delete_entry(%{date: {19, 12, 2013}, id: 3, title: "Movies"})
-# my_todo = TodoList.CsvImporter.import("entries.csv") |> TodoList.delete_entry(3)
-
-async_query = fn(query_def) -> spawn(fn -> IO.puts(run_query.(query_def)) end); end
-
-run_query = fn(query_def) -> :timer.sleep(2000); "#{query_def} result" end
