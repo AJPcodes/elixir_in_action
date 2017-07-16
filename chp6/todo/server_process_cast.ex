@@ -48,7 +48,7 @@ defmodule KeyValueStore do
   end
 
   def handle_cast({:put, key, value}, state) do
-    {:ok, Map.put(state, key, value)}
+    Map.put(state, key, value)
   end
 
   def handle_call({:put, key, value}, state) do
@@ -73,6 +73,6 @@ defmodule KeyValueStore do
   
 end
 
-my_store = ServerProcess.start(KeyValueStore)dd
+my_store = ServerProcess.start(KeyValueStore)
 ServerProcess.call(my_store, {:put, :some_key, :some_value})
 ServerProcess.call(my_store, {:get, :some_key})
