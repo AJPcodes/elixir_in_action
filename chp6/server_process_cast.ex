@@ -72,7 +72,3 @@ defmodule KeyValueStore do
   end
   
 end
-
-my_store = ServerProcess.start(KeyValueStore)
-ServerProcess.call(my_store, {:put, :some_key, :some_value})
-ServerProcess.call(my_store, {:get, :some_key})
